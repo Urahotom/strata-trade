@@ -13,6 +13,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from strata.backtest.benchmark import BenchmarkResult
 from strata.backtest.trades import ClosedTrade, OpenTrade
 
 #: 集計のグルーピングキー
@@ -29,6 +30,11 @@ def key_exit_source(t: ClosedTrade) -> str:
 
 def key_symbol(t: ClosedTrade) -> str:
     return t.symbol
+
+
+def key_exit_year(t: ClosedTrade) -> str:
+    """決済年でグループ化する（yearly セクション用）."""
+    return t.exit_date[:4]
 
 
 @dataclass(frozen=True)
@@ -148,13 +154,16 @@ def render_markdown(
     by_entry_source: Mapping[str, StatBlock] | None = None,
     by_exit_source: Mapping[str, StatBlock] | None = None,
     by_symbol: Mapping[str, StatBlock] | None = None,
+    by_year: Mapping[str, StatBlock] | None = None,
+    benchmark: BenchmarkResult | None = None,
 ) -> str:
     """人が読む有効性レポート（Markdown）を描画する."""
     lines = [f"# バックテスト有効性レポート: {strategy_name}", ""]
-    lines += _overview(metrics, trades)
+    lines += _overview(metrics, trades, benchmark)
     lines += _section("エントリー根拠別（どのシグナルが儲けたか）", by_entry_source)
     lines += _section("エグジット根拠別", by_exit_source)
     lines += _section("銘柄別", by_symbol)
+    lines += _year_section(by_year, benchmark)
     if open_trades:
         lines += ["## 未決済の買い玉", ""]
         for lot in open_trades:
@@ -184,7 +193,11 @@ def write_markdown(markdown: str, path: Path) -> Path:
     return path
 
 
-def _overview(metrics: Mapping[str, float], trades: Sequence[ClosedTrade]) -> list[str]:
+def _overview(
+    metrics: Mapping[str, float],
+    trades: Sequence[ClosedTrade],
+    benchmark: BenchmarkResult | None = None,
+) -> list[str]:
     overall = summarize(trades)
     lines = ["## 概要", ""]
     for label, key in (
@@ -207,6 +220,14 @@ def _overview(metrics: Mapping[str, float], trades: Sequence[ClosedTrade]) -> li
         f"期待値 {overall.expected_value:,.0f} 円 / "
         f"PF {_fmt_pf(overall.profit_factor)}"
     )
+    if "total_return" in metrics and benchmark is not None:
+        excess = metrics["total_return"] - benchmark.total_return
+        lines.append(
+            f"- ベンチマーク Buy&Hold（同一資金・均等・期間内）: "
+            f"{benchmark.total_return * 100:,.2f} % / "
+            f"DD {benchmark.max_drawdown * 100:,.2f} % / "
+            f"**超過 {excess * 100:+,.2f} pt**"
+        )
     lines.append("")
     return lines
 
@@ -231,6 +252,30 @@ def _section(title: str, groups: Mapping[str, StatBlock] | None) -> list[str]:
     return lines
 
 
+def _year_section(
+    by_year: Mapping[str, StatBlock] | None, benchmark: BenchmarkResult | None
+) -> list[str]:
+    """決済年ごとの戦略損益と Buy&Hold 年次リターンの対照表."""
+    if not by_year:
+        return []
+    lines = [
+        "## 年別（戦略 vs Buy&Hold）",
+        "",
+        "| 年 | トレード数 | 勝率 | 戦略 合計損益 | PF | B&Hold 年間リターン |",
+        "|---|---|---|---|---|---|",
+    ]
+    bench_yearly = benchmark.yearly_returns if benchmark is not None else {}
+    for year, stat in by_year.items():
+        bench = bench_yearly.get(year)
+        bench_text = f"{bench * 100:,.1f} %" if bench is not None else "-"
+        lines.append(
+            f"| {year} | {stat.trades} | {stat.win_rate * 100:,.1f} % | "
+            f"{stat.total_pnl:,.0f} | {_fmt_pf(stat.profit_factor)} | {bench_text} |"
+        )
+    lines.append("")
+    return lines
+
+
 def _fmt_pf(pf: float) -> str:
     if pf == math.inf:
         return "∞"
@@ -244,6 +289,7 @@ __all__ = [
     "group_stats",
     "key_entry_source",
     "key_exit_source",
+    "key_exit_year",
     "key_symbol",
     "render_markdown",
     "render_multi_markdown",

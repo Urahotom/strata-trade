@@ -1,5 +1,6 @@
 """⑨ バックテスト（運用と同じ意図台帳・リスクコードパスを流用）."""
 
+from strata.backtest.benchmark import BenchmarkResult, buy_hold
 from strata.backtest.broker import FillPolicy, PaperBroker
 from strata.backtest.metrics import BacktestMetrics, EquityPoint, compute_metrics, max_drawdown
 from strata.backtest.report import (
@@ -7,6 +8,7 @@ from strata.backtest.report import (
     group_stats,
     key_entry_source,
     key_exit_source,
+    key_exit_year,
     key_symbol,
     render_markdown,
     render_multi_markdown,
@@ -28,6 +30,7 @@ __all__ = [
     "BacktestResult",
     "BacktestRunner",
     "BacktestSettings",
+    "BenchmarkResult",
     "ClosedTrade",
     "EquityPoint",
     "Fill",
@@ -36,16 +39,19 @@ __all__ = [
     "PaperBroker",
     "StatBlock",
     "build_trades",
+    "buy_hold",
     "compute_metrics",
     "group_stats",
     "key_entry_source",
     "key_exit_source",
+    "key_exit_year",
     "key_symbol",
     "max_drawdown",
     "normalize_date",
     "render_markdown",
     "render_multi_markdown",
     "summarize",
+    "trades_to_rows",
     "write_markdown",
     "write_trades_csv",
 ]

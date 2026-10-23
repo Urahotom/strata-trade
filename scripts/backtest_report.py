@@ -19,9 +19,11 @@ from strata.backtest import (
     BacktestRunner,
     BacktestSettings,
     FillPolicy,
+    buy_hold,
     group_stats,
     key_entry_source,
     key_exit_source,
+    key_exit_year,
     key_symbol,
     render_multi_markdown,
     write_markdown,
@@ -107,7 +109,7 @@ def main() -> int:
     parser.add_argument("--outdir", default="var/reports")
     parser.add_argument("--cash", type=float, default=3_000_000.0)
     parser.add_argument("--real", help="カンマ区切り銘柄で実データ（要 STRATA_DATA__*）")
-    parser.add_argument("--history-start", default="2023-01-04")
+    parser.add_argument("--history-start", default="2015-01-01")
     args = parser.parse_args()
 
     if args.real:
@@ -121,9 +123,14 @@ def main() -> int:
     # テスト既定（100万円/回）では合成相場の合成価格で機械的に全拒否になるため、
     # レポート検証用の緩いリスク設定を明示的に使う
     risk = RiskSettings(max_notional_per_order=5_000_000, max_qty_per_order=2_000)
+    benchmark = buy_hold(bars, args.cash)
 
     outdir = Path(args.outdir)
     sections: list[tuple[str, dict[str, object]]] = []
+    print(
+        f"{'ベンチマーク Buy&Hold':<20}{'':6}{'':8}{'':10}{'':8}"
+        f"{benchmark.total_return * 100:>9.2f}%  (DD {benchmark.max_drawdown * 100:,.2f} %)"
+    )
     print(f"{'戦略':<22}{'trade':>6}{'勝率':>8}{'期待値':>10}{'PF':>8}{'総return':>10}")
     for strategy in strategies():
         runner = BacktestRunner(
@@ -141,9 +148,11 @@ def main() -> int:
         pf = _pf(trades)
         win = sum(1 for t in trades if t.pnl > 0) / len(trades) if trades else 0.0
         ev = sum(t.pnl for t in trades) / len(trades) if trades else 0.0
+        excess = m.get("total_return", 0.0) - benchmark.total_return
         print(
             f"{strategy.name:<22}{len(trades):>6}{win * 100:>7.1f}%"
             f"{ev:>10,.0f}{pf:>8.2f}{m.get('total_return', 0.0) * 100:>9.2f}%"
+            f"  超過 {excess * 100:+7.2f}pt"
         )
         sections.append(
             (
@@ -155,6 +164,8 @@ def main() -> int:
                     "by_entry_source": overall,
                     "by_exit_source": group_stats(trades, key_exit_source),
                     "by_symbol": group_stats(trades, key_symbol),
+                    "by_year": group_stats(trades, key_exit_year),
+                    "benchmark": benchmark,
                 },
             )
         )

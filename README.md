@@ -47,6 +47,7 @@ uv run mypy
 > `uv sync` し直してください。
 
 各フェーズの動作確認手順（自動テスト＋手動シナリオ）は **`docs/VERIFY.md`** にまとめています。
+バックテストで分かった事実と解釈の注意点は **`docs/FINDINGS.md`**（例: Buy&Hold比で見る教訓）。
 
 ## 設定
 
@@ -113,11 +114,12 @@ print(result.metrics)  # total_return / max_drawdown / win_rate ...
 
 「どのシグナルが儲かるのか」をトレード単位で検証する。MA/RSI/ボリンジャー/
 ドンチアンの4戦略を同一相場でバックテストし、**エントリー根拠・銘柄・
-エグジット根拠別の勝率・期待値・プロフィットファクタ**とトレード単位CSVを出力する:
+エグジット根拠別・年別の勝率・期待値・プロフィットファクタ**とトレード単位CSVを出力する。
+同一期間・同一資金の **Buy&Holdベンチマーク**（均等加重）との超過も表示する:
 
 ```powershell
 uv run python scripts/backtest_report.py                    # 合成相場で即実行
-uv run python scripts/backtest_report.py --real 8306,9984   # 実データ（要データキー）
+uv run python scripts/backtest_report.py --real 8306,9984   # 実データ（既定2015-01-01〜）
 # 出力: var/reports/trades_<戦略>.csv と var/reports/report.md
 ```
 

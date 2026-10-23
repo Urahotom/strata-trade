@@ -149,7 +149,7 @@ uv run python -m strata.engine run         # act_time まで待機して発注�
 
 ## P6 シグナル有効性評価（RSI・ボリンジャー・ドンチアン＋レポート）
 
-自動: `uv run pytest tests/unit/test_indicators.py tests/unit/test_strategy_technical.py tests/unit/test_backtest_trades_report.py tests/unit/test_backtest_attribution.py -q`
+自動: `uv run pytest tests/unit/test_indicators.py tests/unit/test_strategy_technical.py tests/unit/test_backtest_trades_report.py tests/unit/test_backtest_attribution.py tests/unit/test_backtest_benchmark.py -q`
 
 手動（合成相場・ネットワーク不要）:
 
@@ -159,11 +159,13 @@ uv run python scripts/backtest_report.py
 
 合格条件:
 
+- 標準出力の先頭に **ベンチマーク Buy&Hold の総return（とDD）**、戦略別に超過pt
 - 標準出力に戦略別の trade数・勝率・期待値・PF・総return の表
 - `var/reports/trades_<戦略>.csv`（1行=1往復: entry/exit 日付・価格・根拠・保有日数）
-- `var/reports/report.md` にエントリー根拠別・エグジット根拠別・銘柄別の集計
+- `var/reports/report.md` にエントリー根拠別・エグジット根拠別・銘柄別・
+  **年別（戦略 vs Buy&Hold）**の集計と概要のベンチマーク超過行
 
-実データでの検証（要データキー）:
+実データでの検証（要データ取得。既定期間 2015-01-01〜、`--history-start` で変更可）:
 
 ```powershell
 uv run python scripts/backtest_report.py --real 8306,9984
@@ -171,6 +173,7 @@ uv run python scripts/backtest_report.py --real 8306,9984
 
 > レポートは「有効性の判断材料」であり最適化の正当化には使えない（過去最適化の
 > 罠）。採用判断は別期間（ウォークフォワード相当の期間分割）で再現すること。
+> 2015〜実データでの初回比較結果と解釈の注意点は **`docs/FINDINGS.md`**。
 
 ---
 
