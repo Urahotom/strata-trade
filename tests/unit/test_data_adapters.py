@@ -7,9 +7,19 @@ from datetime import date
 import httpx
 import pytest
 
-from strata.data.base import DataProviderError
+from strata.data.base import DataProviderError, to_dot_symbol
 from strata.data.jquants import JQuantsProvider
 from strata.data.yfinance import YFinanceProvider
+
+
+class TestToDotSymbol:
+    def test_日本株は_Tを付与(self) -> None:
+        assert to_dot_symbol("8306") == "8306.T"
+        assert to_dot_symbol("1306.T") == "1306.T"
+
+    def test_指数コードはそのまま(self) -> None:
+        assert to_dot_symbol("^TOPX") == "^TOPX"
+        assert to_dot_symbol("^N225") == "^N225"
 
 
 class TestJQuants:

@@ -187,6 +187,30 @@ uv run python scripts/backtest_report.py --real 8306,9984
 
 ---
 
+## P9 広サンプル walk-forward（30銘柄＋TOPIX ETF B&H）
+
+自動: `uv run pytest tests/unit/test_data_adapters.py -q`（指数コードの
+`to_dot_symbol` 非変換を含む）
+
+手動（要ネット初回・以後はキャッシュ）:
+
+```powershell
+$env:STRATA_DATA__PROVIDER = "yfinance"
+uv run python scripts/backtest_walkforward.py
+```
+
+合格条件:
+
+- `var/reports/p9_bars.json` にデータキャッシュ（再現キー＝sha256 を
+  FINDINGS に記録）。2回目実行はキャッシュ読み込みで同一結果
+- 標準出力と `var/reports/walkforward.md` に評価年ごとの
+  「選択パラメータ（学習）/ 評価return / 等額B&H比 / 指数比」マトリクスと
+  集計（B&Hに勝った回数・平均超過）
+- 条件カード（銘柄数・資金・学習年・評価年・データ期間・キャッシュ名）が
+  レポート先頭に出力される
+
+---
+
 ## 付録A: 終了コード一覧
 
 | コマンド | 0 | 1 | 2 |
