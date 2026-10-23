@@ -126,7 +126,7 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | 設定検証 | HH:MM 形式・close>act・MA期間関係・ポーリング60秒未満を型で強制 | unit |
 | 台帳込み一気通貫 | 発注→約定→executions 記録（buy/sell往復） | scripts/demo_sim.py（手動） |
 
-### 3.7 シグナル有効性評価（P6/P7 実装済み）
+### 3.7 シグナル有効性評価（P6〜P8 実装済み）
 
 | ケース | 期待挙動 | 実装先 |
 |---|---|---|
@@ -138,6 +138,9 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | Runner 帰属 | 約定に戦略名と根拠が付き、fills→trades→集計がend-to-endで繋がる | unit（synthetic相場） |
 | Buy&Holdベンチマーク | 均等加重・開始前枠は現金・年次リターン・空データゼロ | unit（benchmark） |
 | 年別セクション | 決済年グループ集計と B&Hold 年間リターンの対照表を描画 | unit |
+| MDD区間 | 日次評価額（含み損込み）で深さ・ピーク日・底日。空曲線はNone | unit（validity_metrics） |
+| 期待値分解 | 平均利益/平均損失と E=pW−(1−p)L−C の描画（C反映） | unit |
+| 市場投資時間 | 投資時間率・平均/最大エクスポージャー・年別。レポート節 | unit |
 
 ## 4. CI 方針
 

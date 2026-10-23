@@ -20,11 +20,13 @@ from strata.backtest import (
     BacktestSettings,
     FillPolicy,
     buy_hold,
+    exposure_stats,
     group_stats,
     key_entry_source,
     key_exit_source,
     key_exit_year,
     key_symbol,
+    max_drawdown_span,
     render_multi_markdown,
     write_markdown,
     write_trades_csv,
@@ -110,6 +112,12 @@ def main() -> int:
     parser.add_argument("--cash", type=float, default=3_000_000.0)
     parser.add_argument("--real", help="カンマ区切り銘柄で実データ（要 STRATA_DATA__*）")
     parser.add_argument("--history-start", default="2015-01-01")
+    parser.add_argument(
+        "--cost-per-trade",
+        type=float,
+        default=0.0,
+        help="1トレード当たりコスト C（SOR新規発注は手数料無料のため既定0）",
+    )
     args = parser.parse_args()
 
     if args.real:
@@ -149,10 +157,18 @@ def main() -> int:
         win = sum(1 for t in trades if t.pnl > 0) / len(trades) if trades else 0.0
         ev = sum(t.pnl for t in trades) / len(trades) if trades else 0.0
         excess = m.get("total_return", 0.0) - benchmark.total_return
+        span = max_drawdown_span(result.equity_curve)
+        expo = exposure_stats(result.equity_curve)
+        mdd_text = (
+            f"{span.depth * 100:.1f}%({span.peak_date}→{span.trough_date})"
+            if span is not None
+            else "-"
+        )
         print(
             f"{strategy.name:<22}{len(trades):>6}{win * 100:>7.1f}%"
             f"{ev:>10,.0f}{pf:>8.2f}{m.get('total_return', 0.0) * 100:>9.2f}%"
             f"  超過 {excess * 100:+7.2f}pt"
+            f"  MDD {mdd_text}  投資時間 {expo.time_in_market * 100:.0f}%"
         )
         sections.append(
             (
@@ -166,6 +182,8 @@ def main() -> int:
                     "by_symbol": group_stats(trades, key_symbol),
                     "by_year": group_stats(trades, key_exit_year),
                     "benchmark": benchmark,
+                    "curve": result.equity_curve,
+                    "cost_per_trade": args.cost_per_trade,
                 },
             )
         )

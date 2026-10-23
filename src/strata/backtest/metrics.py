@@ -28,6 +28,69 @@ def max_drawdown(equities: Sequence[float]) -> float:
 
 
 @dataclass(frozen=True)
+class DrawdownSpan:
+    """最大ドローダウンの発生区間（ピーク日→底日、depthは 0.0〜1.0）."""
+
+    depth: float
+    peak_date: str
+    trough_date: str
+
+
+def max_drawdown_span(curve: Sequence[EquityPoint]) -> DrawdownSpan | None:
+    """日次評価額（含み損込み）の曲線から MDD とその区間を返す."""
+    peak_equity = float("-inf")
+    peak_date = ""
+    best: DrawdownSpan | None = None
+    for point in curve:
+        if point.equity > peak_equity:
+            peak_equity = point.equity
+            peak_date = point.date
+        if peak_equity > 0:
+            depth = (peak_equity - point.equity) / peak_equity
+            if best is None or depth > best.depth:
+                best = DrawdownSpan(depth=depth, peak_date=peak_date, trough_date=point.date)
+    return best
+
+
+@dataclass(frozen=True)
+class ExposureStats:
+    """市場への投資時間（エクスポージャー）サマリ."""
+
+    #: 対象営業日数
+    days: int
+    #: 株式を1株でも保有していた日数
+    market_days: int
+    #: market_days / days（上昇相場で現金を持ちすぎたかの指標）
+    time_in_market: float
+    #: 日次 market_value / equity の平均
+    avg_exposure: float
+    max_exposure: float
+
+
+def exposure_stats(curve: Sequence[EquityPoint]) -> ExposureStats:
+    """エクイティ曲線から投資時間率と平均エクスポージャーを算出する."""
+    if not curve:
+        return ExposureStats(0, 0, 0.0, 0.0, 0.0)
+    market_days = sum(1 for p in curve if p.market_value > 0)
+    ratios = [p.market_value / p.equity for p in curve if p.equity > 0]
+    return ExposureStats(
+        days=len(curve),
+        market_days=market_days,
+        time_in_market=market_days / len(curve),
+        avg_exposure=sum(ratios) / len(ratios) if ratios else 0.0,
+        max_exposure=max(ratios) if ratios else 0.0,
+    )
+
+
+def yearly_exposure(curve: Sequence[EquityPoint]) -> dict[str, ExposureStats]:
+    """年（date の先頭4文字）別の投資時間サマリ."""
+    buckets: dict[str, list[EquityPoint]] = {}
+    for point in curve:
+        buckets.setdefault(point.date[:4], []).append(point)
+    return {year: exposure_stats(points) for year, points in sorted(buckets.items())}
+
+
+@dataclass(frozen=True)
 class BacktestMetrics:
     """成績サマリ（キーはメール・レポートにそのまま出せる名前）."""
 

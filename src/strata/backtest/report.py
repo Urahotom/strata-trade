@@ -14,6 +14,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from strata.backtest.benchmark import BenchmarkResult
+from strata.backtest.metrics import (
+    EquityPoint,
+    exposure_stats,
+    max_drawdown_span,
+    yearly_exposure,
+)
 from strata.backtest.trades import ClosedTrade, OpenTrade
 
 #: 集計のグルーピングキー
@@ -53,10 +59,14 @@ class StatBlock:
     avg_hold_days: float
     max_loss: float
     max_gain: float
+    #: 勝ちトレードの平均利益（勝ちなしは 0）
+    avg_profit: float
+    #: 負けトレードの平均損失の絶対値（負けなしは 0）
+    avg_loss: float
 
     @staticmethod
     def empty() -> StatBlock:
-        return StatBlock(0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        return StatBlock(0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 
 def summarize(trades: Sequence[ClosedTrade]) -> StatBlock:
@@ -85,6 +95,8 @@ def summarize(trades: Sequence[ClosedTrade]) -> StatBlock:
         avg_hold_days=sum(t.hold_days for t in trades) / len(trades),
         max_loss=min(pnls),
         max_gain=max(pnls),
+        avg_profit=(gross_profit / len(wins)) if wins else 0.0,
+        avg_loss=(gross_loss / len(losses)) if losses else 0.0,
     )
 
 
@@ -156,14 +168,23 @@ def render_markdown(
     by_symbol: Mapping[str, StatBlock] | None = None,
     by_year: Mapping[str, StatBlock] | None = None,
     benchmark: BenchmarkResult | None = None,
+    curve: Sequence[EquityPoint] = (),
+    cost_per_trade: float = 0.0,
 ) -> str:
-    """人が読む有効性レポート（Markdown）を描画する."""
+    """人が読む有効性レポート（Markdown）を描画する.
+
+    curve は日次評価額（含み損込み）のエクイティ曲線。MDD区間と
+    市場投資時間の算出に使う。cost_per_trade は1トレード当たりコスト C
+    （SOR新規発注は手数料無料のため既定0。スリッページを見積もるなら設定）。
+    """
     lines = [f"# バックテスト有効性レポート: {strategy_name}", ""]
-    lines += _overview(metrics, trades, benchmark)
+    lines += _overview(metrics, trades, benchmark, cost_per_trade)
+    lines += _drawdown_section(curve, benchmark)
     lines += _section("エントリー根拠別（どのシグナルが儲けたか）", by_entry_source)
     lines += _section("エグジット根拠別", by_exit_source)
     lines += _section("銘柄別", by_symbol)
     lines += _year_section(by_year, benchmark)
+    lines += _exposure_section(curve)
     if open_trades:
         lines += ["## 未決済の買い玉", ""]
         for lot in open_trades:
@@ -197,12 +218,13 @@ def _overview(
     metrics: Mapping[str, float],
     trades: Sequence[ClosedTrade],
     benchmark: BenchmarkResult | None = None,
+    cost_per_trade: float = 0.0,
 ) -> list[str]:
     overall = summarize(trades)
     lines = ["## 概要", ""]
     for label, key in (
         ("総リターン", "total_return"),
-        ("最大DD", "max_drawdown"),
+        ("最大DD（日次評価額・含み損込み）", "max_drawdown"),
         ("win率（約定サマリ）", "win_rate"),
         ("実現損益", "realized_pnl"),
         ("シグナル見送り", "rejected_orders"),
@@ -220,6 +242,18 @@ def _overview(
         f"期待値 {overall.expected_value:,.0f} 円 / "
         f"PF {_fmt_pf(overall.profit_factor)}"
     )
+    lines.append(
+        f"- 平均利益 {overall.avg_profit:,.0f} 円 / 平均損失 {overall.avg_loss:,.0f} 円（絶対値）"
+    )
+    p = overall.win_rate
+    e_net = overall.expected_value - cost_per_trade
+    lines.append(
+        f"- 期待値分解 E = p・W − (1−p)・L − C = "
+        f"{p:.2f}×{overall.avg_profit:,.0f} − "
+        f"{1 - p:.2f}×{overall.avg_loss:,.0f} − {cost_per_trade:,.0f} "
+        f"= **{e_net:,.0f} 円/回**（C=1トレード当たりコスト。SOR新規発注は"
+        f"手数料無料、C=0 のときはスリッページ未計上）"
+    )
     if "total_return" in metrics and benchmark is not None:
         excess = metrics["total_return"] - benchmark.total_return
         lines.append(
@@ -228,6 +262,29 @@ def _overview(
             f"DD {benchmark.max_drawdown * 100:,.2f} % / "
             f"**超過 {excess * 100:+,.2f} pt**"
         )
+    lines.append("")
+    return lines
+
+
+def _drawdown_section(curve: Sequence[EquityPoint], benchmark: BenchmarkResult | None) -> list[str]:
+    """最大DDの発生区間（日次評価額・含み損込み）."""
+    if not curve:
+        return []
+    span = max_drawdown_span(curve)
+    if span is None:
+        return []
+    lines = [
+        "## 最大ドローダウン（日次評価額・保有中の含み損込み）",
+        "",
+        f"- 戦略: **{span.depth * 100:,.2f} %**（ピーク {span.peak_date} → 底 {span.trough_date}）",
+    ]
+    if benchmark is not None and benchmark.curve:
+        bench_span = max_drawdown_span(benchmark.curve)
+        if bench_span is not None:
+            lines.append(
+                f"- Buy&Hold: {bench_span.depth * 100:,.2f} %（ピーク "
+                f"{bench_span.peak_date} → 底 {bench_span.trough_date}）"
+            )
     lines.append("")
     return lines
 
@@ -276,6 +333,30 @@ def _year_section(
     return lines
 
 
+def _exposure_section(curve: Sequence[EquityPoint]) -> list[str]:
+    """市場への投資時間（上昇相場で現金を持ちすぎたか等の判別）."""
+    if not curve:
+        return []
+    overall = exposure_stats(curve)
+    lines = [
+        "## 市場への投資時間（エクスポージャー）",
+        "",
+        f"- 投資時間率: **{overall.time_in_market * 100:,.1f} %**"
+        f"（{overall.market_days}/{overall.days} 営業日で保有） / "
+        f"平均エクスポージャー {overall.avg_exposure * 100:,.1f} % / "
+        f"最大 {overall.max_exposure * 100:,.1f} %",
+        "",
+        "| 年 | 投資時間率 | 平均エクスポージャー |",
+        "|---|---|---|",
+    ]
+    for year, stat in yearly_exposure(curve).items():
+        lines.append(
+            f"| {year} | {stat.time_in_market * 100:,.1f} % | {stat.avg_exposure * 100:,.1f} % |"
+        )
+    lines.append("")
+    return lines
+
+
 def _fmt_pf(pf: float) -> str:
     if pf == math.inf:
         return "∞"
@@ -286,15 +367,18 @@ __all__ = [
     "CSV_COLUMNS",
     "StatBlock",
     "TradeKey",
+    "exposure_stats",
     "group_stats",
     "key_entry_source",
     "key_exit_source",
     "key_exit_year",
     "key_symbol",
+    "max_drawdown_span",
     "render_markdown",
     "render_multi_markdown",
     "summarize",
     "trades_to_rows",
     "write_markdown",
     "write_trades_csv",
+    "yearly_exposure",
 ]
