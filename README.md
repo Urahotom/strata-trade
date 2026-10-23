@@ -89,7 +89,11 @@ $env:STRATA_API__PASSWORD = "..."
 - **P9 (実装済)**: 検証の外部妥当性上げ — **30銘柄（TOPIX30風）＋TOPIX ETF
   ベンチマーク＋walk-forward**（`scripts/backtest_walkforward.py`。学習期間で
   パラメータ選択→翌年のみ採点を複数窓でロール）。結果は `docs/FINDINGS.md`
-  F-004（等額B&Hに15/16窓で敗北＝現行戦略に優位性の証拠なし）
+  F-004（等額B&Hに13/16窓で敗北＝現行戦略に優位性の証拠なし）
+- **P10 (実装済)**: リスクオフ・オーバーレイ検証（`scripts/overlay_vs_buyhold.py`）
+  とデータ修復（`adjclose` + `data/repair.py` の未登録分割・不正ティック除去）。
+  結果は `docs/FINDINGS.md` F-005 — 全オーバーレイが素のB&Hに大敗し、
+  **P5（自動発注）は開設しない**と判定
 
 ## 使い方（P3で揃う最小フロー）
 

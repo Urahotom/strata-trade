@@ -115,61 +115,67 @@ def families() -> list[Family]:
 
 
 def fetch_bars(symbols: list[str], start: str, end: str, cache: Path) -> dict[str, list[DailyBar]]:
+    """キャッシュマージ方式のデータ取得（未取得銘柄だけ取得して追記）.
+
+    注意: キャッシュは取得期間を保持しないため、ヒストリー窓を変えて
+    再取得したい場合はキャッシュファイルを削除する（研究用スクリプトの約束）。
+    """
+    raw: dict[str, list[dict]] = {}
     if cache.exists():
         raw = json.loads(cache.read_text(encoding="utf-8"))
-        bars = {
-            symbol: [DailyBar(symbol=symbol, source="yfinance", **rec) for rec in recs]
-            for symbol, recs in raw.items()
-        }
-        print(f"キャッシュ読込: {cache}（{len(bars)}銘柄）")
-        return bars
-    from strata.config import load_settings
-    from strata.data import make_provider
+    missing = [s for s in symbols if s not in raw]
+    if missing:
+        from strata.config import load_settings
+        from strata.data import make_provider
 
-    provider = make_provider(load_settings().data)
-    bars = {}
-    for symbol in symbols:
-        series = []
-        for attempt in range(2):
-            try:
-                series = provider.fetch_daily(
-                    symbol, date.fromisoformat(start), date.fromisoformat(end)
-                )
-                break
-            except Exception as exc:  # 取得不可銘柄は除外して続行
-                if attempt == 0:
-                    time.sleep(3.0)
-                    continue
-                print(f"  ! {symbol} 取得失敗（除外）: {exc}")
-        if not series:
-            print(f"  ! {symbol} データなし（除外）")
-            continue
-        bars[symbol] = series
-        print(f"  + {symbol} {len(series)}本")
-        time.sleep(0.4)  # Yahoo 連続要求の Rate Limit 回避
-    cache.parent.mkdir(parents=True, exist_ok=True)
-    cache.write_text(
-        json.dumps(
-            {
-                s: [
-                    {
-                        "date": b.date,
-                        "open": b.open,
-                        "high": b.high,
-                        "low": b.low,
-                        "close": b.close,
-                        "volume": b.volume,
-                    }
-                    for b in series
-                ]
-                for s, series in bars.items()
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-    print(f"キャッシュ書込: {cache}")
-    return bars
+        provider = make_provider(load_settings().data)
+        for symbol in missing:
+            series = []
+            for attempt in range(2):
+                try:
+                    series = provider.fetch_daily(
+                        symbol, date.fromisoformat(start), date.fromisoformat(end)
+                    )
+                    break
+                except Exception as exc:  # 取得不可銘柄は除外して続行
+                    if attempt == 0:
+                        time.sleep(3.0)
+                        continue
+                    print(f"  ! {symbol} 取得失敗（除外）: {exc}")
+            if not series:
+                print(f"  ! {symbol} データなし（除外）")
+                continue
+            raw[symbol] = [
+                {
+                    "date": b.date,
+                    "open": b.open,
+                    "high": b.high,
+                    "low": b.low,
+                    "close": b.close,
+                    "volume": b.volume,
+                }
+                for b in series
+            ]
+            print(f"  + {symbol} {len(series)}本")
+            time.sleep(0.4)  # Yahoo 連続要求の Rate Limit 回避
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+        print(f"キャッシュ更新: {cache}（計 {len(raw)}銘柄）")
+    else:
+        print(f"キャッシュ読込: {cache}（{len(raw)}銘柄）")
+    bars = {
+        symbol: [DailyBar(symbol=symbol, source="yfinance", **rec) for rec in raw[symbol]]
+        for symbol in symbols
+        if symbol in raw
+    }
+    return _load_and_repair(bars)
+
+
+def _load_and_repair(bars: dict[str, list[DailyBar]]) -> dict[str, list[DailyBar]]:
+    """未登録分割・不正ティックを研究用に修復する（F-004 正誤参照）."""
+    from strata.data.repair import repair_split_jumps
+
+    return {symbol: repair_split_jumps(series) for symbol, series in bars.items()}
 
 
 def slice_bars(bars: dict[str, list[DailyBar]], start: str, end: str) -> dict[str, list[DailyBar]]:

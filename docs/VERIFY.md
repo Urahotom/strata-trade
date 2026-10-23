@@ -211,6 +211,29 @@ uv run python scripts/backtest_walkforward.py
 
 ---
 
+## P10 リスクオフ・オーバーレイ検証（vs 素のB&H）
+
+自動: `uv run pytest tests/unit/test_backtest_overlay.py tests/unit/test_data_repair.py -q`
+
+手動（要ネット初回・p9キャッシュ再利用）:
+
+```powershell
+$env:STRATA_DATA__PROVIDER = "yfinance"
+uv run python scripts/overlay_vs_buyhold.py
+```
+
+合格条件:
+
+- `var/reports/overlay.md` に条件カード＋全期間表（総return・年率・MDD・
+  水没日数・投資時間・切替/年・vs B&H）＋評価窓表＋コスト感度表
+- 素のB&H の投資時間が 100%・切替 0 で整合（オーバーレイ側は未来参照なし:
+  判定は当日終値・反映は翌日から）
+- 修復データの整合: 1306.T の 2015-01 段差と 2026-03 の 2日スパイクが
+  系列に現れない（B&H MDD が 40% 未満に収まる）
+- 判定は `docs/FINDINGS.md` F-005（全オーバーレイ敗北・P5 不开設）
+
+---
+
 ## 付録A: 終了コード一覧
 
 | コマンド | 0 | 1 | 2 |

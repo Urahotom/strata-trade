@@ -15,6 +15,12 @@ from strata.backtest.metrics import (
     yearly_exposure,
     yearly_returns,
 )
+from strata.backtest.overlay import (
+    ma_cross_weights,
+    ma_filter_weights,
+    simulate_weights,
+    vol_target_weights,
+)
 from strata.backtest.report import (
     PeriodRow,
     StatBlock,
@@ -65,14 +71,18 @@ __all__ = [
     "key_exit_source",
     "key_exit_year",
     "key_symbol",
+    "ma_cross_weights",
+    "ma_filter_weights",
     "max_drawdown",
     "max_drawdown_span",
     "normalize_date",
     "render_markdown",
     "render_multi_markdown",
     "render_periods_markdown",
+    "simulate_weights",
     "summarize",
     "trades_to_rows",
+    "vol_target_weights",
     "write_markdown",
     "write_trades_csv",
     "yearly_exposure",
