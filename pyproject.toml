@@ -1,0 +1,59 @@
+[project]
+name = "strata-trade"
+version = "0.1.0"
+description = "三菱UFJ eスマート証券 kabuステーションAPI 自動売買システム（スクラッチ実装）"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pytest>=8.2",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/strata"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+# 日本語コメント・ドキュメント向けの緩和（全角括弧などを誤検知するため）
+# UP046: 意図的にクラシックなTypeVarスタイルを使用（型エイリアスとの整合）
+ignore = ["RUF001", "RUF002", "RUF003", "UP046"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["N802", "N803"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+mypy_path = "src"
+packages = ["strata"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = '-m "not live"'
+markers = [
+    "live: 実kabuステーション環境へのアクセスを伴うテスト（既定でスキップ。STRATA_ALLOW_LIVE=1 が必要）",
+    "sim: フェイクkabuステーションサーバを使うローカル統合テスト（安全）",
+]

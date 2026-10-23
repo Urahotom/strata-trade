@@ -1,0 +1,52 @@
+# strata-trade 設定サンプル
+# このファイルを config/config.toml にコピーして編集する。
+# APIパスワードなどの秘密情報はここに書けない（環境変数のみ）:
+#   STRATA_API__PASSWORD         ... kabuステーションAPIパスワード
+#   STRATA_SMTP__PASSWORD        ... SMTPパスワード（必要なら）
+#   STRATA_DATA__JQUANTS__APP_ID ... J-Quants APIキー（プロバイダに jquants を選ぶ場合）
+
+[api]
+# test = 検証環境 (ポート18081) / production = 本番 (ポート18080)
+environment = "test"
+host = "localhost"
+timeout_connect_s = 2.0
+timeout_read_s = 5.0
+timeout_order_read_s = 10.0
+# レート制限（公式上限: 発注5件/秒・情報10件/秒・歩み値2件/秒。安全側設定）
+rate_limit_order_per_s = 3.0
+rate_limit_info_per_s = 8.0
+rate_limit_timeandsales_per_s = 1.0
+
+[storage]
+db_path = "var/strata.db"
+
+[risk]
+max_qty_per_order = 1000
+max_notional_per_order = 1000000
+max_open_positions = 10
+max_daily_loss = 50000
+max_total_risk = 100000
+
+[smtp]
+enabled = false
+host = "smtp.example.com"
+port = 587
+use_tls = true
+username = "notify@example.com"
+from_addr = "notify@example.com"
+to_addr = "trades@example.com"
+
+[data]
+provider = "jquants"        # jquants | yfinance
+history_start = "2019-01-01"
+halt_when_today_bar_missing = true   # 当日バー欠損時に取引中断（推奨）
+close_check_tolerance = 0.001        # 出典間の上値突合許容差（相対）
+
+[data.jquants]
+base_url = "https://api.jquants.com"
+timeout_s = 10.0
+# app_id は環境変数 STRATA_DATA__JQUANTS__APP_ID でのみ設定する
+
+[data.yfinance]
+base_url = "https://query1.finance.yahoo.com"
+timeout_s = 10.0
