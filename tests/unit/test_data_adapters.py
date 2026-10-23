@@ -7,9 +7,19 @@ from datetime import date
 import httpx
 import pytest
 
-from strata.data.base import DataProviderError
+from strata.data.base import DataProviderError, to_dot_symbol
 from strata.data.jquants import JQuantsProvider
 from strata.data.yfinance import YFinanceProvider
+
+
+class TestToDotSymbol:
+    def test_日本株は_Tを付与(self) -> None:
+        assert to_dot_symbol("8306") == "8306.T"
+        assert to_dot_symbol("1306.T") == "1306.T"
+
+    def test_指数コードはそのまま(self) -> None:
+        assert to_dot_symbol("^TOPX") == "^TOPX"
+        assert to_dot_symbol("^N225") == "^N225"
 
 
 class TestJQuants:
@@ -137,6 +147,18 @@ class TestYFinance:
         assert len(bars) == 2
         assert bars[0].source == "yfinance"
         assert bars[0].close == 105
+
+    def test_adjclose優先で分割調整される(self) -> None:
+        """indicators.adjclose がある場合は生 close でなく調整後を使う."""
+        payload = self._chart_payload()
+        payload["chart"]["result"][0]["indicators"]["adjclose"] = [{"adjclose": [52.5, 53.0]}]
+
+        def _handle(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json=payload)
+
+        provider = YFinanceProvider(transport=httpx.MockTransport(_handle))
+        bars = provider.fetch_daily("8306", date(2026, 10, 19), date(2026, 10, 21))
+        assert [b.close for b in bars] == [52.5, 53.0]
         assert bars[0].volume == 1000
         provider.close()
 

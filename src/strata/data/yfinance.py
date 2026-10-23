@@ -87,6 +87,15 @@ class YFinanceProvider(MarketDataProvider):
             quote = result["indicators"]["quote"][0]
         except (KeyError, IndexError) as exc:
             raise DataProviderError("Yahoo応答に price レイアウトがありません") from exc
+        #: 分割・配当で調整済みの close があればそれを優先する。
+        #: 生 close は株式分割日を真実の -90% 暴落として拾ってしまい
+        #: バックテストが完全に壊れる（F-004 正誤参照）ため必須。
+        adj_close: list[object] | None = None
+        try:
+            adj_raw = result["indicators"]["adjclose"][0]["adjclose"]
+            adj_close = list(adj_raw) if adj_raw is not None else None
+        except (KeyError, IndexError, TypeError):
+            adj_close = None
 
         bars: list[DailyBar] = []
         for i, ts in enumerate(timestamps):
@@ -95,6 +104,8 @@ class YFinanceProvider(MarketDataProvider):
                 h = quote["high"][i]
                 low = quote["low"][i]
                 c = quote["close"][i]
+                if adj_close is not None:
+                    c = adj_close[i]
             except (KeyError, IndexError, TypeError) as exc:
                 raise DataProviderError(f"Yahoo応答の列長が不揃いです (index={i})") from exc
             if o is None or h is None or low is None or c is None:

@@ -57,8 +57,13 @@ class MarketDataProvider(ABC):
 
 
 def to_dot_symbol(symbol: str) -> str:
-    """証券コードを「8697.T」形式へ正規化（東証=東京のみ想定）."""
+    """証券コードを「8697.T」形式へ正規化（東証=東京のみ想定）.
+
+    Yahoo指数コード（^TOPX 等、先頭が ^）は変換せずそのまま返す。
+    """
     code = symbol.split("@")[0].strip()
+    if code.startswith("^"):
+        return code
     return code if code.endswith(".T") else f"{code}.T"
 
 

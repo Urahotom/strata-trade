@@ -144,6 +144,10 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | 年率・年次リターン | CAGR（日数から年換算）と 戦略/B&Hold 年別リターンの対照表 | unit |
 | 市場投資時間 | 投資時間率・平均/最大エクスポージャー・年別。レポート節 | unit |
 | 期間分割検証 | 学習・調整期間/最終評価期間の対照テーブル描画（採点対象の明示） | unit |
+| 指数コード変換 | `^TOPX` 等を `to_dot_symbol` がそのまま通過（YAHOO_INDEX_PREFIX） | unit（data_adapters） |
+| オーバーレイ重み | 200MA/MAクロス/ボラ目標の重みが0-1・翌日反映（当日終値判定）。過去窓のみ参照 | unit（overlay） |
+| オーバーレイ再現 | simulate_weights: フル Invest と B&H 一致、全期間現金はゼロ、切替コスト反映 | unit（overlay） |
+| データ修復 | 通常系列は無変更。持続的段差＝分割として履歴を再スケール、一過性ティックは前日値置換 | unit（data_repair） |
 
 ## 4. CI 方針
 

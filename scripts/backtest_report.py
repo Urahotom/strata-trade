@@ -103,11 +103,14 @@ def real_market(
 ) -> dict[str, list[DailyBar]]:
     from strata.config import load_settings
     from strata.data import make_provider
+    from strata.data.repair import repair_split_jumps
 
     provider = make_provider(load_settings().data)
     start = date.fromisoformat(history_start)
     end = date.fromisoformat(history_end) if history_end else date.today()
-    return {symbol: provider.fetch_daily(symbol, start, end) for symbol in symbols}
+    return {
+        symbol: repair_split_jumps(provider.fetch_daily(symbol, start, end)) for symbol in symbols
+    }
 
 
 def strategies() -> list[Strategy]:
