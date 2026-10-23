@@ -46,6 +46,8 @@ uv run mypy
 > あります（os error 396）。その場合は `$env:UV_LINK_MODE = "copy"` を設定して
 > `uv sync` し直してください。
 
+各フェーズの動作確認手順（自動テスト＋手動シナリオ）は **`docs/VERIFY.md`** にまとめています。
+
 ## 設定
 
 `config/config.example.toml` を `config/config.toml` にコピーして編集。
