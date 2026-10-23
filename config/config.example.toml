@@ -50,3 +50,23 @@ timeout_s = 10.0
 [data.yfinance]
 base_url = "https://query1.finance.yahoo.com"
 timeout_s = 10.0
+
+[engine]
+# 1営業日エンジンのスケジュール（1日1プロセス。寄前に起動し act_time まで待機する）
+act_time = "09:10"       # HH:MM シグナル生成・発注
+close_time = "15:20"     # HH:MM 監視終了（引け後）と終日処理
+monitor_interval_s = 30  # 約定状態のポーリング間隔（秒・1分未満推奨）
+strategy = "ma_cross"
+ma_fast = 5
+ma_slow = 25
+
+# 監視銘柄（1銘柄につき1ブロック）。stop_width は1株あたりロスカット幅（円）
+[[watchlist]]
+symbol = "8306"
+trading_unit = 100
+stop_width = 30.0
+
+# [[watchlist]]
+# symbol = "9984"
+# trading_unit = 100
+# stop_width = 15.0

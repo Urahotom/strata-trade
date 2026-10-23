@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr, field_validator
+from pydantic import BaseModel, Field, SecretStr, ValidationInfo, field_validator, model_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -171,6 +171,50 @@ class DataSettings(BaseModel):
         return v
 
 
+class EngineSettings(BaseModel):
+    """1営業日エンジン（ペーパートレード）の運用設定."""
+
+    #: HH:MM シグナル生成・発注時刻（寄り付き後、当日バーが揃う時刻）
+    act_time: str = "09:10"
+    #: HH:MM 監視終了時刻（引け後。以降は日終り処理のみ行う）
+    close_time: str = "15:20"
+    #: 約定状態のポーリング間隔（秒）。公式注意書きは1分未満の間隔を推奨
+    monitor_interval_s: float = Field(default=30.0, ge=1.0, lt=60.0)
+    #: 使用する戦略
+    strategy: Literal["ma_cross"] = "ma_cross"
+    #: MAクロットの短期線期間（本数）
+    ma_fast: int = Field(default=5, gt=0)
+    #: MAクロットの長期線期間（本数）。fast < slow を満たすこと
+    ma_slow: int = Field(default=25, gt=0)
+
+    @field_validator("act_time", "close_time")
+    @classmethod
+    def _validate_hhmm(cls, v: str) -> str:
+        from datetime import datetime
+
+        try:
+            datetime.strptime(v, "%H:%M")
+        except ValueError as exc:
+            raise ValueError(f"HH:MM 形式で指定してください: {v}") from exc
+        return v
+
+    @field_validator("ma_slow")
+    @classmethod
+    def _validate_ma(cls, v: int, info: ValidationInfo) -> int:
+        fast = info.data.get("ma_fast")
+        if isinstance(fast, int) and v <= fast:
+            raise ValueError(f"ma_slow は ma_fast より大きい値を指定してください: {v} <= {fast}")
+        return v
+
+    @model_validator(mode="after")
+    def _validate_time_order(self) -> EngineSettings:
+        if self.close_time <= self.act_time:
+            raise ValueError(
+                f"close_time は act_time より後にしてください: {self.act_time}→{self.close_time}"
+            )
+        return self
+
+
 class Settings(BaseSettings):
     """アプリ全体の設定."""
 
@@ -187,6 +231,9 @@ class Settings(BaseSettings):
     risk: RiskSettings = Field(default_factory=RiskSettings)
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
     data: DataSettings = Field(default_factory=DataSettings)
+    engine: EngineSettings = Field(default_factory=EngineSettings)
+    #: 監視銘柄（TOMLでは [[watchlist]] 節を1銘柄ずつ記述）
+    watchlist: list[WatchlistEntry] = Field(default_factory=list)
 
     @classmethod
     def settings_customise_sources(

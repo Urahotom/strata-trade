@@ -53,7 +53,7 @@ class DailyEngine:
     def __init__(
         self,
         *,
-        provider: MarketDataProvider,
+        provider: MarketDataProvider | None = None,
         strategy: Strategy,
         universe: Sequence[WatchlistEntry],
         manager: OrderManager,
@@ -98,6 +98,9 @@ class DailyEngine:
         """
         self._require_new()
         self._trade_date = trade_date
+        provider = self._provider
+        if provider is None:
+            return self._halt(trade_date, "市場データプロバイダが設定されていません")
         bars: dict[str, list[DailyBar]] = {}
         try:
             history_start = date.fromisoformat(self._settings.history_start)
@@ -105,7 +108,7 @@ class DailyEngine:
             raise ValueError(f"history_start が不正です: {self._settings.history_start}") from exc
 
         for entry in self._universe:
-            raw = self._provider.fetch_daily(entry.symbol, history_start, trade_date)
+            raw = provider.fetch_daily(entry.symbol, history_start, trade_date)
             report = validate_bars(raw, today=trade_date)
             if self._bars_repo is not None:
                 self._bars_repo.upsert_bars(report.valid)

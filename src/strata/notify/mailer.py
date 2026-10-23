@@ -12,7 +12,7 @@ from collections.abc import Callable
 from email.message import EmailMessage
 
 from strata.config import SmtpSettings
-from strata.notify.base import Severity
+from strata.notify.base import LoggingNotifier, Notifier, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -60,3 +60,10 @@ class MailNotifier:
             if s.username and s.password:
                 smtp.login(s.username, s.password.get_secret_value())
             smtp.send_message(msg)
+
+
+def make_notifier(settings: SmtpSettings) -> Notifier:
+    """設定から通知器を生成する。SMTP無効時はログのみ（メールはログへフォールバック）."""
+    if settings.enabled:
+        return MailNotifier(settings, failover=LoggingNotifier())
+    return LoggingNotifier()
