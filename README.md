@@ -79,6 +79,8 @@ $env:STRATA_API__PASSWORD = "..."
 - P5: 少額実運用
 - **P6 (実装済)**: シグナル追加（RSI/ボリンジャー/ドンチアン）とトレード単位
   有効性レポート（`scripts/backtest_report.py`）
+- **P7 (実装済)**: Buy&Holdベンチマーク比較・年別内訳・既定期間2015〜。
+  検証結果の記録は `docs/FINDINGS.md`
 
 ## 使い方（P3で揃う最小フロー）
 
@@ -110,7 +112,7 @@ print(result.metrics)  # total_return / max_drawdown / win_rate ...
 > データは必ず品質バリダを通します。当日バー欠損（`halt_when_today_bar_missing`）、
 > `high < low` 等の異常値は採用せず取引を中断します。
 
-## シグナル有効性レポート（P6）
+## シグナル有効性レポート（P6/P7）
 
 「どのシグナルが儲かるのか」をトレード単位で検証する。MA/RSI/ボリンジャー/
 ドンチアンの4戦略を同一相場でバックテストし、**エントリー根拠・銘柄・

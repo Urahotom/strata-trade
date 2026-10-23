@@ -147,7 +147,7 @@ uv run python -m strata.engine run         # act_time まで待機して発注�
 
 ---
 
-## P6 シグナル有効性評価（RSI・ボリンジャー・ドンチアン＋レポート）
+## P6/P7 シグナル有効性評価（RSI・ボリンジャー・ドンチアン＋レポート＋Buy&Holdベンチマーク）
 
 自動: `uv run pytest tests/unit/test_indicators.py tests/unit/test_strategy_technical.py tests/unit/test_backtest_trades_report.py tests/unit/test_backtest_attribution.py tests/unit/test_backtest_benchmark.py -q`
 

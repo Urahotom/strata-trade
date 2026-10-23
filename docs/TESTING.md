@@ -126,7 +126,7 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | 設定検証 | HH:MM 形式・close>act・MA期間関係・ポーリング60秒未満を型で強制 | unit |
 | 台帳込み一気通貫 | 発注→約定→executions 記録（buy/sell往復） | scripts/demo_sim.py（手動） |
 
-### 3.7 シグナル有効性評価（P6 実装済み）
+### 3.7 シグナル有効性評価（P6/P7 実装済み）
 
 | ケース | 期待挙動 | 実装先 |
 |---|---|---|
