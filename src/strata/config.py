@@ -90,8 +90,7 @@ class RiskSettings(BaseModel):
     #: 1回発注の最大数量（株）
     max_qty_per_order: int = Field(default=1000, gt=0)
     #: 1回発注の最大金額（円）
-    max_notional_per_order: float = Field(default=1_000_000, gt=0)
-    #: 同時保有ポジション数の上限
+    max_notional_per_order: float = Field(default=1_000_000, gt=0)  #: 同時保有ポジション数の上限
     max_open_positions: int = Field(default=10, gt=0)
     #: 1日最大損失（円）。超過でキルスイッチ
     max_daily_loss: float = Field(default=50_000, gt=0)
@@ -180,8 +179,10 @@ class EngineSettings(BaseModel):
     close_time: str = "15:20"
     #: 約定状態のポーリング間隔（秒）。公式注意書きは1分未満の間隔を推奨
     monitor_interval_s: float = Field(default=30.0, ge=1.0, lt=60.0)
-    #: 使用する戦略
-    strategy: Literal["ma_cross"] = "ma_cross"
+    #: 使用する戦略（パラメータの調整はバックテスト側で行う）
+    strategy: Literal["ma_cross", "rsi_reversion", "bollinger_reversion", "donchian_breakout"] = (
+        "ma_cross"
+    )
     #: MAクロットの短期線期間（本数）
     ma_fast: int = Field(default=5, gt=0)
     #: MAクロットの長期線期間（本数）。fast < slow を満たすこと

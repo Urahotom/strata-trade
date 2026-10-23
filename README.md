@@ -27,8 +27,8 @@ P4の運用ゲート（検証環境で2週間無事故）を実行中にして�
 | `strata.risk` | 発注前チェック・サイジング・ロスカット・キルスイッチ | P2 完了 |
 | `strata.notify` | SMTPメール通知（INFO/ALERT/CRITICAL） | P2 完了 |
 | `strata.data` | 日足（J-Quants / yfinance）・品質バリデータ・出典突合 | P3 完了 |
-| `strata.strategy` | 戦略プラグイン（シグナル出力のみ・発注権限なし） | P3 完了 |
-| `strata.backtest` | 過去データ再生（意図台帳/リスクは運用と同一コード） | P3 完了 |
+| `strata.strategy` | 戦略プラグイン（MAクロス/RSI/ボリンジャー/ドンチアン・発注権限なし） | P3/P6 |
+| `strata.backtest` | 過去データ再生＋**トレード単位台帳CSV・シグナル有効性レポート** | P3/P6 |
 | `strata.engine` | 1営業日の状態機械＋本番配線・ペーパートレードCLI | P3/P4 完了 |
 | `strata.sim` | フェイクkabuステーションサーバ（開発・テスト専用） | P0 完了 |
 
@@ -76,6 +76,8 @@ $env:STRATA_API__PASSWORD = "..."
 - **P4 (実装済)**: ペーパートレード配線（`strata.engine run/reconcile/status`）・台帳デモ。
   検証環境での2週間無事故ゲートはここから運用
 - P5: 少額実運用
+- **P6 (実装済)**: シグナル追加（RSI/ボリンジャー/ドンチアン）とトレード単位
+  有効性レポート（`scripts/backtest_report.py`）
 
 ## 使い方（P3で揃う最小フロー）
 
@@ -106,6 +108,21 @@ print(result.metrics)  # total_return / max_drawdown / win_rate ...
 
 > データは必ず品質バリダを通します。当日バー欠損（`halt_when_today_bar_missing`）、
 > `high < low` 等の異常値は採用せず取引を中断します。
+
+## シグナル有効性レポート（P6）
+
+「どのシグナルが儲かるのか」をトレード単位で検証する。MA/RSI/ボリンジャー/
+ドンチアンの4戦略を同一相場でバックテストし、**エントリー根拠・銘柄・
+エグジット根拠別の勝率・期待値・プロフィットファクタ**とトレード単位CSVを出力する:
+
+```powershell
+uv run python scripts/backtest_report.py                    # 合成相場で即実行
+uv run python scripts/backtest_report.py --real 8306,9984   # 実データ（要データキー）
+# 出力: var/reports/trades_<戦略>.csv と var/reports/report.md
+```
+
+エンジンの戦略切替は `config.toml` の `[engine] strategy = "rsi_reversion"` など
+（パラメータ調整はバックテスト側で行い、運用は設計標準値で回す）。
 
 ## ペーパートレード（P4: 検証環境で1営業日を回す）
 

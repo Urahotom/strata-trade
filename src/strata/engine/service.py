@@ -38,6 +38,11 @@ from strata.risk.killswitch import KillSwitch
 from strata.store.db import init_db
 from strata.strategy.base import Strategy
 from strata.strategy.moving_average import MovingAverageCross
+from strata.strategy.technical import (
+    BollingerMeanReversion,
+    DonchianBreakout,
+    RSIMeanReversion,
+)
 
 #: 待機中にCtrl+Cへ反応できるよう睡眠を分割する間隔（秒）
 _WAIT_CHUNK_S: Final = 5.0
@@ -57,9 +62,23 @@ class Runtime:
     engine: DailyEngine
 
 
+#: 設定名 -> 戦略コンストラクタ（パラメータ既定値は各戦略の設計上の標準値）
+_STRATEGY_BUILDERS: dict[str, Callable[[], Strategy]] = {
+    "ma_cross": lambda: MovingAverageCross(fast=5, slow=25),
+    "rsi_reversion": RSIMeanReversion,
+    "bollinger_reversion": BollingerMeanReversion,
+    "donchian_breakout": DonchianBreakout,
+}
+
+
 def make_strategy(settings: EngineSettings) -> Strategy:
-    """設定から戦略を生成する（現行は MAクロス1種のみのため分岐なし）."""
-    return MovingAverageCross(fast=settings.ma_fast, slow=settings.ma_slow)
+    """設定から戦略を生成する。パラメータ調整はバックテスト側で行う."""
+    if settings.strategy == "ma_cross":
+        return MovingAverageCross(fast=settings.ma_fast, slow=settings.ma_slow)
+    builder = _STRATEGY_BUILDERS.get(settings.strategy)
+    if builder is None:
+        raise ConfigurationError(f"未対応の戦略です: {settings.strategy}")
+    return builder()
 
 
 def build_runtime(
