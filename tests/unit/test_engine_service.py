@@ -15,6 +15,7 @@ from strata.api.models import TokenResult
 from strata.api.results import ApiSuccess
 from strata.config import (
     ApiSettings,
+    DataSettings,
     EngineSettings,
     SmtpSettings,
     StorageSettings,
@@ -132,6 +133,8 @@ def make_settings(tmp_path: Path, **engine_kwargs) -> AppSettings:  # type: igno
         api=ApiSettings(environment="test"),
         storage=StorageSettings(db_path=tmp_path / "service.db"),
         engine=EngineSettings(**defaults),
+        # 環境変数（STRATA_DATA__*）の混入で挙動が変わらないよう固定する
+        data=DataSettings(),
         watchlist=[WatchlistEntry(symbol="8306", trading_unit=100, stop_width=10)],
     )
 

@@ -136,6 +136,8 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | 有効性集計 | 勝率・期待値・PF（損失ゼロ=∞）・最大損益・グループ化 | unit（report） |
 | CSV/Markdown 出力 | ヘッダー付きCSV・根拠別/銘柄別テーブル・未決済玉の表示 | unit |
 | Runner 帰属 | 約定に戦略名と根拠が付き、fills→trades→集計がend-to-endで繋がる | unit（synthetic相場） |
+| Buy&Holdベンチマーク | 均等加重・開始前枠は現金・年次リターン・空データゼロ | unit（benchmark） |
+| 年別セクション | 決済年グループ集計と B&Hold 年間リターンの対照表を描画 | unit |
 
 ## 4. CI 方針
 
