@@ -1,6 +1,6 @@
 [project]
 name = "strata-trade"
-version = "0.2.2"
+version = "0.2.3"
 description = "三菱UFJ eスマート証券 kabuステーションAPI 自動売買システム（スクラッチ実装）"
 requires-python = ">=3.12,<3.13"
 dependencies = [
