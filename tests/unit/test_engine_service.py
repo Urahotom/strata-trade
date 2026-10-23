@@ -295,6 +295,22 @@ class TestBuildRuntime:
         strategy = make_strategy(EngineSettings(ma_fast=3, ma_slow=9))
         assert isinstance(strategy, MovingAverageCross)
 
+    def test_戦略選択が4種そろう(self) -> None:
+        from strata.strategy import (
+            BollingerMeanReversion,
+            DonchianBreakout,
+            RSIMeanReversion,
+        )
+
+        assert isinstance(make_strategy(EngineSettings(strategy="rsi_reversion")), RSIMeanReversion)
+        assert isinstance(
+            make_strategy(EngineSettings(strategy="bollinger_reversion")),
+            BollingerMeanReversion,
+        )
+        assert isinstance(
+            make_strategy(EngineSettings(strategy="donchian_breakout")), DonchianBreakout
+        )
+
 
 class TestNotifierFactory:
     def test_smtp無効はログのみ(self) -> None:

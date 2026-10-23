@@ -147,6 +147,33 @@ uv run python -m strata.engine run         # act_time まで待機して発注�
 
 ---
 
+## P6 シグナル有効性評価（RSI・ボリンジャー・ドンチアン＋レポート）
+
+自動: `uv run pytest tests/unit/test_indicators.py tests/unit/test_strategy_technical.py tests/unit/test_backtest_trades_report.py tests/unit/test_backtest_attribution.py -q`
+
+手動（合成相場・ネットワーク不要）:
+
+```powershell
+uv run python scripts/backtest_report.py
+```
+
+合格条件:
+
+- 標準出力に戦略別の trade数・勝率・期待値・PF・総return の表
+- `var/reports/trades_<戦略>.csv`（1行=1往復: entry/exit 日付・価格・根拠・保有日数）
+- `var/reports/report.md` にエントリー根拠別・エグジット根拠別・銘柄別の集計
+
+実データでの検証（要データキー）:
+
+```powershell
+uv run python scripts/backtest_report.py --real 8306,9984
+```
+
+> レポートは「有効性の判断材料」であり最適化の正当化には使えない（過去最適化の
+> 罠）。採用判断は別期間（ウォークフォワード相当の期間分割）で再現すること。
+
+---
+
 ## 付録A: 終了コード一覧
 
 | コマンド | 0 | 1 | 2 |

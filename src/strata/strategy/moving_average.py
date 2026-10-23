@@ -6,15 +6,7 @@ from collections.abc import Mapping, Sequence
 
 from strata.data.base import DailyBar
 from strata.strategy.base import Signal, SignalAction, Strategy
-
-
-def sma(values: Sequence[float], n: int) -> float:
-    """直近n本の単純移動平均。n本満たなければValueError."""
-    if n <= 0:
-        raise ValueError("期間nは1以上です")
-    if len(values) < n:
-        raise ValueError(f"移動平均に不足する本数です: {len(values)} < {n}")
-    return sum(values[-n:]) / n
+from strata.strategy.indicators import sma
 
 
 class MovingAverageCross(Strategy):

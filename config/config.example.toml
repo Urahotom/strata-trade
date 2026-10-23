@@ -56,8 +56,8 @@ timeout_s = 10.0
 act_time = "09:10"       # HH:MM シグナル生成・発注
 close_time = "15:20"     # HH:MM 監視終了（引け後）と終日処理
 monitor_interval_s = 30  # 約定状態のポーリング間隔（秒・1分未満推奨）
-strategy = "ma_cross"
-ma_fast = 5
+strategy = "ma_cross"      # ma_cross | rsi_reversion | bollinger_reversion | donchian_breakout
+ma_fast = 5                # ma_cross のみ有効（他戦略は設計標準パラメータ）
 ma_slow = 25
 
 # 監視銘柄（1銘柄につき1ブロック）。stop_width は1株あたりロスカット幅（円）

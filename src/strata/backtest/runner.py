@@ -19,6 +19,7 @@ from pathlib import Path
 from strata.api.models import OrderSide, PriceType, SendOrderRequest
 from strata.backtest.broker import FillPolicy, PaperBroker
 from strata.backtest.metrics import EquityPoint, compute_metrics
+from strata.backtest.trades import ClosedTrade, Fill, OpenTrade, build_trades, normalize_date
 from strata.config import RiskSettings, WatchlistEntry
 from strata.data.base import DailyBar
 from strata.notify.base import InMemoryNotifier, Notifier
@@ -44,6 +45,12 @@ class BacktestResult:
     metrics: Mapping[str, float] = field(default_factory=dict)
     #: リスク拒否・重複などで発注に至らなかったシグナル数
     rejected_signals: int = 0
+    #: 約定明细（シグナル由来の情報付き。有効性レポートの入力）
+    fills: list[Fill] = field(default_factory=list)
+    #: FIFOで対応付けした往復トレード
+    trades: list[ClosedTrade] = field(default_factory=list)
+    #: レポート末尾時点の未決済買い玉
+    open_trades: list[OpenTrade] = field(default_factory=list)
 
 
 class BacktestRunner:
@@ -86,6 +93,8 @@ class BacktestRunner:
         dates = sorted({b.date for series in self._bars.values() for b in series})
         closes = self._close_lookup()
         result = BacktestResult()
+        #: intent_id -> (戦略名, シグナル根拠)。トレード台帳の由来付与に使う
+        sources: dict[str, tuple[str, str]] = {}
 
         for day in dates:
             today_closes = {s: closes[(s, day)] for s in self._bars if (s, day) in closes}
@@ -98,7 +107,7 @@ class BacktestRunner:
             signals = self._strategy.generate_signals(self._bars_upto(day))
             result.signals.extend(signals)
             for signal in signals:
-                if not self._execute(signal, day, broker, manager, repo, risk):
+                if not self._execute(signal, day, broker, manager, repo, risk, sources):
                     result.rejected_signals += 1
 
             market_value = sum(
@@ -112,6 +121,8 @@ class BacktestRunner:
             )
 
         executed = conn.execute("SELECT COUNT(*) AS n FROM executions").fetchone()["n"]
+        result.fills = self._collect_fills(conn, sources)
+        result.trades, result.open_trades = build_trades(result.fills)
         metrics = compute_metrics(
             result.equity_curve,
             initial_cash=self._settings.initial_cash,
@@ -132,6 +143,7 @@ class BacktestRunner:
         manager: OrderManager,
         repo: IntentRepository,
         risk: RiskEngine,
+        sources: dict[str, tuple[str, str]],
     ) -> bool:
         entry = self._universe.get(signal.symbol)
         if entry is None:
@@ -151,7 +163,9 @@ class BacktestRunner:
                     qty=qty,
                     price_type=PriceType.MARKET,
                 )
-                manager.submit(request, trade_date=day, ref_price=ref_price, stop_width=stop_width)
+                intent = manager.submit(
+                    request, trade_date=day, ref_price=ref_price, stop_width=stop_width
+                )
             else:
                 held = broker.held_qty(signal.symbol)
                 if held < entry.trading_unit:
@@ -162,7 +176,7 @@ class BacktestRunner:
                     qty=held,
                     price_type=PriceType.MARKET,
                 )
-                manager.submit(
+                intent = manager.submit(
                     request,
                     trade_date=day,
                     ref_price=self._latest_close(signal.symbol, day) or 0.0,
@@ -170,7 +184,30 @@ class BacktestRunner:
         except OrderManagerError:
             # リスク拒否・重複・クロス・リジェクト。戦略ループは止めずに計上
             return False
+        sources[intent.intent_id] = (self._strategy.name, signal.reason)
         return True
+
+    def _collect_fills(
+        self, conn: sqlite3.Connection, sources: dict[str, tuple[str, str]]
+    ) -> list[Fill]:
+        """executions 表を約定順に読み、シグナル由来を付与して Fill を返す."""
+        rows = conn.execute("SELECT * FROM executions ORDER BY traded_at, execution_id").fetchall()
+        fills: list[Fill] = []
+        for row in rows:
+            source, reason = sources.get(str(row["intent_id"]), ("", ""))
+            fills.append(
+                Fill(
+                    traded_at=str(row["traded_at"]),
+                    date=normalize_date(str(row["traded_at"])),
+                    symbol=str(row["symbol"]),
+                    side=str(row["side"]),
+                    qty=int(row["qty"]),
+                    price=float(row["price"]),
+                    source=source,
+                    reason=reason,
+                )
+            )
+        return fills
 
     def _size(
         self,

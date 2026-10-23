@@ -1,6 +1,6 @@
 # strata-trade テスト仕様書
 
-Version: 0.6 / 更新日: 2026-10-23
+Version: 0.7 / 更新日: 2026-10-23
 関連: [設計仕様書](./DESIGN.md)
 
 実装状況: §3.1 APIクライアント（P1）、§3.2 注文管理・§3.3 リスク/通知（P2）、
@@ -125,6 +125,17 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | 監視の一時失敗 | 1周失敗は ALERT のみで次週期へ続行 | unit |
 | 設定検証 | HH:MM 形式・close>act・MA期間関係・ポーリング60秒未満を型で強制 | unit |
 | 台帳込み一気通貫 | 発注→約定→executions 記録（buy/sell往復） | scripts/demo_sim.py（手動） |
+
+### 3.7 シグナル有効性評価（P6 実装済み）
+
+| ケース | 期待挙動 | 実装先 |
+|---|---|---|
+| 指標の数学 | RSI 一本調了100/0・境界内、BB 母集団SD・幅ゼロ、ドンチアン高安・本日除外基準 | unit（indicators） |
+| 3戦略の状態遷移 | 復帰クロス／ブレイク当日のみシグナル。閾値内連発なし・本数不足は無反応 | unit（technical） |
+| トレード再構築 | FIFO対応（分割買い・部分対応・買い残）、売り先行は例外、日数正規化 | unit（trades） |
+| 有効性集計 | 勝率・期待値・PF（損失ゼロ=∞）・最大損益・グループ化 | unit（report） |
+| CSV/Markdown 出力 | ヘッダー付きCSV・根拠別/銘柄別テーブル・未決済玉の表示 | unit |
+| Runner 帰属 | 約定に戦略名と根拠が付き、fills→trades→集計がend-to-endで繋がる | unit（synthetic相場） |
 
 ## 4. CI 方針
 
