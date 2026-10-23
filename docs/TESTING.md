@@ -1,6 +1,6 @@
 # strata-trade テスト仕様書
 
-Version: 0.5 / 更新日: 2026-10-23
+Version: 0.6 / 更新日: 2026-10-23
 関連: [設計仕様書](./DESIGN.md)
 
 実装状況: §3.1 APIクライアント（P1）、§3.2 注文管理・§3.3 リスク/通知（P2）、
@@ -111,6 +111,20 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 トークン再発行で旧トークン失効、401 の Code 4001009、必須パラメータ欠き 400、
 リジェクトスクリプト、取消で `State=5` + `RecType=6`、応答喪失シナリオ、
 **安全ガード（18080遮断）自体のテスト**（`tests/unit/test_safety_guard.py`）。
+
+### 3.6 ペーパートレード運用（P4 実装済み）
+
+| ケース | 期待挙動 | 実装先 |
+|---|---|---|
+| スケジュール進行 | act_time まで待機→prepare/act→close_time まで間隔監視→finish | unit（疑似時計） |
+| 認証失敗 | 発注・リコンサイルせず HALTED（CRITICAL通知） | unit |
+| 起動時リコンサイル | 当日日付で実行。オーファン建玉なら bootstrap 中止・発注なし | unit |
+| prepare 中断 | act せずに finish（日次サマリに中断理由） | unit |
+| act でキルスイッチ | HALTED だが finish（スナップショットとサマリ）まで実行 | unit |
+| Ctrl+C | act 前でも終日処理へ移行し、ALERT通知のうえ終了 | unit |
+| 監視の一時失敗 | 1周失敗は ALERT のみで次週期へ続行 | unit |
+| 設定検証 | HH:MM 形式・close>act・MA期間関係・ポーリング60秒未満を型で強制 | unit |
+| 台帳込み一気通貫 | 発注→約定→executions 記録（buy/sell往復） | scripts/demo_sim.py（手動） |
 
 ## 4. CI 方針
 
