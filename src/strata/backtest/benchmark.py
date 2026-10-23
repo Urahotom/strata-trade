@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
-from strata.backtest.metrics import EquityPoint, max_drawdown
+from strata.backtest.metrics import EquityPoint, max_drawdown, yearly_returns
 from strata.data.base import DailyBar
 
 
@@ -73,20 +73,5 @@ def buy_hold(bars: Mapping[str, Sequence[DailyBar]], initial_cash: float) -> Ben
         curve=curve,
         total_return=equities[-1] / initial_cash - 1.0,
         max_drawdown=max_drawdown(equities),
-        yearly_returns=_yearly_returns(curve, initial_cash),
+        yearly_returns=yearly_returns(curve, initial_cash),
     )
-
-
-def _yearly_returns(curve: Sequence[EquityPoint], initial_cash: float) -> dict[str, float]:
-    """年末値の前期比リターン（初年は初期資金比）."""
-    last_by_year: dict[str, float] = {}
-    for point in curve:
-        last_by_year[point.date[:4]] = point.equity
-    out: dict[str, float] = {}
-    prev_equity = initial_cash
-    for year in sorted(last_by_year):
-        equity = last_by_year[year]
-        if prev_equity > 0:
-            out[year] = equity / prev_equity - 1.0
-        prev_equity = equity
-    return out
