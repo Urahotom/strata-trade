@@ -126,7 +126,7 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | 設定検証 | HH:MM 形式・close>act・MA期間関係・ポーリング60秒未満を型で強制 | unit |
 | 台帳込み一気通貫 | 発注→約定→executions 記録（buy/sell往復） | scripts/demo_sim.py（手動） |
 
-### 3.7 シグナル有効性評価（P6/P7 実装済み）
+### 3.7 シグナル有効性評価（P6〜P8 実装済み）
 
 | ケース | 期待挙動 | 実装先 |
 |---|---|---|
@@ -138,6 +138,12 @@ sim = `test_client_integration.py` / `test_order_manager_integration.py`。
 | Runner 帰属 | 約定に戦略名と根拠が付き、fills→trades→集計がend-to-endで繋がる | unit（synthetic相場） |
 | Buy&Holdベンチマーク | 均等加重・開始前枠は現金・年次リターン・空データゼロ | unit（benchmark） |
 | 年別セクション | 決済年グループ集計と B&Hold 年間リターンの対照表を描画 | unit |
+| MDD区間 | 日次評価額（含み損込み）で深さ・ピーク日・底日。空曲線はNone | unit（validity_metrics） |
+| 回復（水没）日数 | 回復日の算出と未回復時は曲線末尾まで。日数計算 | unit |
+| 期待値分解 | 平均利益/平均損失を金額と買付金額比の両方で算出・描画（E=pW−(1−p)L−C、C反映） | unit |
+| 年率・年次リターン | CAGR（日数から年換算）と 戦略/B&Hold 年別リターンの対照表 | unit |
+| 市場投資時間 | 投資時間率・平均/最大エクスポージャー・年別。レポート節 | unit |
+| 期間分割検証 | 学習・調整期間/最終評価期間の対照テーブル描画（採点対象の明示） | unit |
 
 ## 4. CI 方針
 

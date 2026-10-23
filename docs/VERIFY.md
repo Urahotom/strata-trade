@@ -147,9 +147,9 @@ uv run python -m strata.engine run         # act_time まで待機して発注�
 
 ---
 
-## P6/P7 シグナル有効性評価（RSI・ボリンジャー・ドンチアン＋レポート＋Buy&Holdベンチマーク）
+## P6〜P8 シグナル有効性評価（RSI・ボリンジャー・ドンチアン＋レポート＋ベンチマーク＋MDD/投資時間）
 
-自動: `uv run pytest tests/unit/test_indicators.py tests/unit/test_strategy_technical.py tests/unit/test_backtest_trades_report.py tests/unit/test_backtest_attribution.py tests/unit/test_backtest_benchmark.py -q`
+自動: `uv run pytest tests/unit/test_indicators.py tests/unit/test_strategy_technical.py tests/unit/test_backtest_trades_report.py tests/unit/test_backtest_attribution.py tests/unit/test_backtest_benchmark.py tests/unit/test_backtest_validity_metrics.py -q`
 
 手動（合成相場・ネットワーク不要）:
 
@@ -164,6 +164,16 @@ uv run python scripts/backtest_report.py
 - `var/reports/trades_<戦略>.csv`（1行=1往復: entry/exit 日付・価格・根拠・保有日数）
 - `var/reports/report.md` にエントリー根拠別・エグジット根拠別・銘柄別・
   **年別（戦略 vs Buy&Hold）**の集計と概要のベンチマーク超過行
+- （P8）**最大ドローダウン区間（日次評価額・ピーク→底の日付・回復/水没日数、
+  B&H比）**、概要の**期待値分解 E=pW−(1−p)L−C**（平均利益・平均損失を
+  **金額と買付金額比の両記**）、**年率リターン（CAGR）**、
+  **市場への投資時間**（全体と年別の投資時間率・平均エクスポージャー）の各節
+- （P8）**実験条件カード**（コマンド・期間・資金・C・パラメータ・実行日）が
+  report.md 冒頭に出力される。`--history-end` を固定して2回実行し、出力が
+  一致することを以て再現確認とする
+- （P8）**期間分割検証**: 学習・調整期間（〜`--split`）と最終評価期間
+  （`--split`〜）を各戦略で独立実行し、総return・年率・MDD・期待値・
+  投資時間を対照表示（採点対象は評価期間のみ）
 
 実データでの検証（要データ取得。既定期間 2015-01-01〜、`--history-start` で変更可）:
 
