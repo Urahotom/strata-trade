@@ -28,6 +28,7 @@ P4の運用ゲート（検証環境で2週間無事故）を実行中にして�
 | `strata.notify` | SMTPメール通知（INFO/ALERT/CRITICAL） | P2 完了 |
 | `strata.data` | 日足（J-Quants / yfinance）・品質バリデータ・出典突合 | P3 完了 |
 | `strata.strategy` | 戦略プラグイン（MAクロス/RSI/ボリンジャー/ドンチアン・発注権限なし） | P3/P6 |
+| `strata.strategy.ml_probability` | ML翌日騰落確率（実験・`ml` extra 必須・非営利限定） | P11 |
 | `strata.backtest` | 過去データ再生＋**トレード単位台帳CSV・シグナル有効性レポート** | P3/P6 |
 | `strata.engine` | 1営業日の状態機械＋本番配線・ペーパートレードCLI | P3/P4 完了 |
 | `strata.sim` | フェイクkabuステーションサーバ（開発・テスト専用） | P0 完了 |
@@ -45,6 +46,12 @@ uv run mypy
 > **OneDrive 同期フォルダ内の場合の注意**: uv のハードリンクが失敗することが
 > あります（os error 396）。その場合は `$env:UV_LINK_MODE = "copy"` を設定して
 > `uv sync` し直してください。
+
+> **`ml` extra（実験用・任意）**: `strata.strategy.ml_probability`（ML翌日騰落確率）
+> は `numpy` / `scikit-learn` を要する。**デフォルトの中核は標準ライブラリのみ**で
+> 動く（`ml` 無しの `uv run pytest` も緑）。実験する場合のみ `uv sync --all-extras`
+> か `uv run --extra ml ...` で導入する。参照元が CC BY-NC 4.0（非営利）のため、
+> この戦略は実験ブランチ限りの非営利利用とし MIT の `main` には統合しない。
 
 各フェーズの動作確認手順（自動テスト＋手動シナリオ）は **`docs/VERIFY.md`** にまとめています。
 バックテストで分かった事実と解釈の注意点は **`docs/FINDINGS.md`**（例: Buy&Hold比で見る教訓）。

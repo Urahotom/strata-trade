@@ -17,6 +17,10 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.10",
 ]
+ml = [
+    "numpy>=1.26",
+    "scikit-learn>=1.4",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -49,6 +53,10 @@ packages = ["strata"]
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "scipy.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

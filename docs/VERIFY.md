@@ -234,6 +234,35 @@ uv run python scripts/overlay_vs_buyhold.py
 
 ---
 
+## P11 ML騰落確率戦略（外部ソフト判断のクリーンルーム再実装・実験）
+
+自動: `uv run --extra ml pytest tests/unit/test_strategy_ml_probability.py -q`
+（`ml` extra 未導入なら `pytest.importorskip` で自動スキップ。コアは標準LIBのみ）
+
+手動（P9キャッシュ再利用・ネットワーク不要）:
+
+```powershell
+uv run --extra ml python scripts/backtest_ml.py
+```
+
+合格条件:
+
+- `var/reports/ml.md` に **A 閾値別の監査表**（実現/含み損益・投資時間・平均Eクスポ・
+  期末建玉・vs B&H）／**B ランダム対照40通りに対する return/exp 分位**／**C 予測確率の
+  校正表**／**D コスト感度**（片道コスト率を売買名簿額に課す）／**E ラベルhorizon感度**
+  （lag=0 非実行系 vs lag=1 実行系）が出力される（F-006 参照）
+- **未来参照なし**: 学習は `train_end`（評価年始）より前のデータのみで、**ラベル対象日も
+  `train_end` 未満に閉じる**（境界リークなし）。約定整合で `lag=1`（t+1→t+2）が既定。
+  評価年は完全アウト・オブ・サンプル。**成績は評価期間のみ**で集計（走査窓で薄めない）
+- 判定は `docs/FINDINGS.md` F-006（Headlineは含み益依存・return/expのランダム分位は中央
+  以下・校正過信・horizon整合でも優位なし＝選択スキルの証拠なし・P5 不開設）
+
+**ライセンス**: 参照元 hajime-f/stocktrading は CC BY-NC 4.0（非営利）。コードは
+コピーせず考え方のみの独立再実装。当戦略は実験ブランチ限りの非営利利用とし、
+MIT の `main` へのマージ・実運用は行わない（モジュール先頭注記参照）。
+
+---
+
 ## 付録A: 終了コード一覧
 
 | コマンド | 0 | 1 | 2 |
